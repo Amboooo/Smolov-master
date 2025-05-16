@@ -1,0 +1,37 @@
+// src/app/test/cert-error/page.tsx
+
+'use client';
+
+import { useSearchParams } from 'next/navigation';
+import { CertError } from '@/components/CertError';
+import { Input } from '@/components/ui/input';
+import { useState, useEffect } from 'react';
+
+export default function CertErrorTestPage() {
+  const searchParams = useSearchParams();
+  const initialCode = searchParams.get('code') || '';
+  const [errorCode, setErrorCode] = useState(initialCode);
+
+  useEffect(() => {
+    const paramCode = searchParams.get('code');
+    if (paramCode) setErrorCode(paramCode);
+  }, [searchParams]);
+
+  return (
+    <div className="max-w-2xl mx-auto py-10 px-4 space-y-6">
+      <h1 className="text-2xl font-bold">Test Certificate Error Component</h1>
+
+      <label htmlFor="code-input" className="block font-medium">
+        Enter or modify an SSL error code:
+      </label>
+      <Input
+        id="code-input"
+        value={errorCode}
+        onChange={(e) => setErrorCode(e.target.value)}
+        placeholder="e.g. ssl-error-bad-cert-domain"
+      />
+
+      {errorCode && <CertError errorCode={errorCode} />}
+    </div>
+  );
+}

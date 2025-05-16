@@ -1,0 +1,219 @@
+#!/usr/bin/env sh
+
+#
+# Copyright 2015 the original author or authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+# shellcheck disable=SC2002,SC2034,SC2116,SC2145,SC2154,SC2166,SC2181
+
+# Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
+DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
+
+APP_NAME="Gradle"
+APP_BASE_NAME=$(basename "$0")
+
+# Use the maximum available, or set MAX_FD != -1 to use that value.
+MAX_FD="maximum"
+
+# Use the maximum available, or set MAX_FD != -1 to use that value.
+# OS X is limited to 256 by default for unprivileged users (see 'ulimit -n').
+# Relevant tickets:
+# - https://github.com/gradle/gradle/issues/21104
+# - https://github.com/Homebrew/homebrew-core/issues/100001
+if [ "$(uname)" = "Darwin" ]; then
+    MAX_FD=256
+fi
+
+warn () {
+    echo "$@" 1>&2
+}
+
+die () {
+    echo
+    echo "$@"
+    echo
+    exit 1
+}
+
+# OS specific support (must be 'true' or 'false').
+cygwin=false
+msys=false
+darwin=false
+nonstop=false
+case "$(uname)" in
+  CYGWIN* )
+    cygwin=true
+    ;;
+  Darwin* )
+    darwin=true
+    ;;
+  MINGW* )
+    msys=true
+    ;;
+  NONSTOP* )
+    nonstop=true
+    ;;
+esac
+
+# Attempt to set JAVA_HOME if it's not already set.
+if [ -z "$JAVA_HOME" ] ; then
+    if $darwin ; then
+        if [ -x "/usr/libexec/java_home" ] ; then
+            JAVA_HOME=$(/usr/libexec/java_home)
+        elif [ -d "/Library/Java/JavaVirtualMachines/jdk.bundle/Contents/Home" ] ; then
+            JAVA_HOME="/Library/Java/JavaVirtualMachines/jdk.bundle/Contents/Home"
+        fi
+    else
+        java=$(command -v java)
+        if [ -n "$java" ] ; then
+            java=$(readlink -f "$java")
+            JAVA_HOME=$(dirname "$(dirname "$java")")
+        fi
+    fi
+    if [ -z "$JAVA_HOME" ] ; then
+        die "ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH.
+
+Please set the JAVA_HOME variable in your environment to match the
+location of your Java installation."
+    fi
+fi
+
+# Determine the Java command to use to start the JVM.
+if [ -n "$JAVA_HOME" ] ; then
+    if [ -x "$JAVA_HOME/jre/sh/java" ] ; then
+        # IBM's JDK on AIX uses strange locations for the executables
+        JAVACMD="$JAVA_HOME/jre/sh/java"
+    else
+        JAVACMD="$JAVA_HOME/bin/java"
+    fi
+    if [ ! -x "$JAVACMD" ] ; then
+        die "ERROR: JAVA_HOME is set to an invalid directory: $JAVA_HOME
+
+Please set the JAVA_HOME variable in your environment to match the
+location of your Java installation."
+    fi
+else
+    JAVACMD="java"
+    which java >/dev/null 2>&1 || die "ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH.
+
+Please set the JAVA_HOME variable in your environment to match the
+location of your Java installation."
+fi
+
+# Increase the maximum file descriptors if we can.
+if ! $cygwin && ! $darwin && ! $nonstop ; then
+    MAX_FD_LIMIT=$(ulimit -H -n)
+    if [ "$?" -eq 0 ] ; then
+        if [ "$MAX_FD" = "maximum" ] || [ "$MAX_FD" = "max" ] ; then
+            # Use system's maximum.
+            MAX_FD="$MAX_FD_LIMIT"
+        fi
+        ulimit -n "$MAX_FD"
+        if [ "$?" -ne 0 ] ; then
+            warn "Could not set maximum file descriptor limit: $MAX_FD"
+        fi
+    else
+        warn "Could not query system maximum file descriptor limit: $MAX_FD_LIMIT"
+    fi
+fi
+
+# Add script base dir to the PATH
+# Required for non-standard Cumulus deployment
+# See https://github.com/gradle/gradle/issues/10462
+APP_HOME_DIR=$(dirname "$0")
+PATH=$APP_HOME_DIR:$PATH
+
+# Collect all arguments for the java command, following the shell quoting and substitution rules
+#
+# (This is replacements for what was formerly known as an explicit passing of every argument)
+#
+# Attempt to detect kotlin compiler daemon considerations for better cross platform behavior
+# https://github.com/gradle/gradle/issues/20577
+if [ "${GRADLE_OPTS:-}" = *-Dkotlin.compiler.execution.strategy=daemon* ] && [ "${DEFAULT_JVM_OPTS:-}" != *org.gradle.jvmargs* ]; then
+    DEFAULT_JVM_OPTS="$DEFAULT_JVM_OPTS \"-Dorg.gradle.jvmargs=-XX:MaxMetaspaceSize=256m -Xmx512m\""
+fi
+
+# Set the GRADLE_HOME directory if it's not already set.
+# This matters if this script is linked directly, or is not in the distribution structure.
+GRADLE_HOME=$(cd -P "$APP_HOME_DIR" && pwd -P)
+export GRADLE_HOME
+
+# Add default JVM options if no JAVA_OPTS or GRADLE_OPTS are set.
+# This prevents running this script with non-standard options.
+if [ -z "$JAVA_OPTS" ] && [ -z "$GRADLE_OPTS" ] ; then
+    GRADLE_OPTS="$DEFAULT_JVM_OPTS"
+fi
+
+# For Cygwin or MSYS, switch paths to Windows format before running java
+if $cygwin || $msys ; then
+    APP_HOME_DIR=$(cygpath --path --mixed "$APP_HOME_DIR")
+    GRADLE_HOME=$(cygpath --path --mixed "$GRADLE_HOME")
+    JAVACMD=$(cygpath --path --mixed "$JAVACMD")
+
+    # We need to encoding to UTF-8 in order to capture the output of gradle -v in TempFS
+    # https://github.com/gradle/gradle/issues/20246
+    if $cygwin ; then
+        JAVA_OPTS="$JAVA_OPTS -Dfile.encoding=UTF-8"
+    fi
+fi
+
+# Escape application args
+save () {
+    # try to keep this function create only one line to stdout
+    printf %s "$1" | sed "s/'/'\\\\''/g;1s/^/'/;\$s/\$/' \\\\/"
+}
+APP_ARGS=$(save "$APP_BASE_NAME")
+for arg do
+    APP_ARGS="$APP_ARGS $(save "$arg")"
+done
+
+# Split up the JVM options only if strings are used.
+# JDK_JAVA_OPTIONS can escape quotes with backslash, and space is a delimiter.
+# JAVA_TOOL_OPTIONS can escape quotes with backslash, and space is a delimiter.
+# JAVA_OPTS and GRADLE_OPTS can escape quotes with backslash, but space is not a delimiter.
+# So we will only split by space if the string is not quoted.
+# Define a function to escape single quotes for use in eval
+escape_single_quotes() {
+    echo "$1" | sed "s/'/'\\\\''/g"
+}
+jvm_options_array=()
+eval "jvm_options_array=($GRADLE_OPTS $JAVA_OPTS)"
+java_options_array=()
+if [ -n "$JDK_JAVA_OPTIONS" ]; then
+    eval "java_options_array=($JDK_JAVA_OPTIONS)"
+fi
+if [ -n "$JAVA_TOOL_OPTIONS" ]; then
+    # Add a marker to handle JAVA_TOOL_OPTIONS separately
+    eval "java_options_array+=(\"--JAVA_TOOL_OPTIONS_MARKER\" $JAVA_TOOL_OPTIONS)"
+fi
+
+# Prepend the GRADLE_HOME so this script will be functions correctly when invoked as a symlink
+# or not in the expected directory structure.
+# (This is replacements for what was formerly known as an explicit passing of every argument)
+CLASSPATH="$GRADLE_HOME/lib/gradle-launcher.jar"
+
+# Use "exec" if on NONSTOP platform. Else use "eval exec".
+# (This is replacements for what was formerly known as an explicit passing of every argument)
+if $nonstop ; then
+    exec "$JAVACMD" "${jvm_options_array[@]}" "${java_options_array[@]}" \
+        -classpath "$CLASSPATH" \
+        org.gradle.launcher.GradleMain \
+        $APP_ARGS
+else
+    eval exec \"\$JAVACMD\" \"\${jvm_options_array[@]}\" \"\${java_options_array[@]}\" \
+        -classpath \"\$CLASSPATH\" \
+        org.gradle.launcher.GradleMain \
+        $APP_ARGS
+fi
